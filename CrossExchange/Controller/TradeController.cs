@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 
 namespace CrossExchange.Controller
 {
-    [Route("api/Trade")]
+	[Route("api/Trade")]
     public class TradeController : ControllerBase
     {
         private IShareRepository _shareRepository { get; set; }
@@ -22,17 +19,14 @@ namespace CrossExchange.Controller
             _tradeRepository = tradeRepository;
             _portfolioRepository = portfolioRepository;
         }
-
-
-        [HttpGet("{portfolioid}")]
-        public async Task<IActionResult> GetAllTradings([FromRoute]int portFolioid)
+		
+        [HttpGet("{portfolioId}")]
+        public async Task<IActionResult> GetAllTradings([FromRoute]int portfolioId)
         {
-            var trade = _tradeRepository.Query().Where(x => x.PortfolioId.Equals(portFolioid));
+            var trade = await _tradeRepository.GetAllTradings(portfolioId);
             return Ok(trade);
         }
-
-
-
+		
         /*************************************************************************************************************************************
         For a given portfolio, with all the registered shares you need to do a trade which could be either a BUY or SELL trade. For a particular trade keep following conditions in mind:
 		BUY:
@@ -52,8 +46,80 @@ namespace CrossExchange.Controller
         [HttpPost]
         public async Task<IActionResult> Post([FromBody]TradeModel model)
         {
-            return Created("Trade", model);
+			if (!ModelState.IsValid)
+			{
+				return BadRequest(ModelState);
+			}
+
+			Portfolio portfolio = await _portfolioRepository.GetAsync(model.PortfolioId);
+
+			if (portfolio == null)
+			{
+				return BadRequest("Invalid portfolio.");
+			}
+
+			// Check share is exists and search for the last share rate.
+
+			HourlyShareRate share = (await _shareRepository.GetBySymbol(model.Symbol)).FirstOrDefault();
+
+			if (share == null)
+			{
+				return BadRequest("Invalid share.");
+			}
+						
+			decimal latestRate = (await _shareRepository.GetBySymbol(model.Symbol))
+				.OrderByDescending(x => x.TimeStamp)
+				.First().Rate;
+
+			Trade trade;
+
+			if (model.Action == "BUY")
+			{
+				// Create the BUY trade with lastest price.
+
+				trade = new Trade()
+				{
+					Action = model.Action,
+					PortfolioId = model.PortfolioId,
+					Symbol = model.Symbol,
+					NoOfShares = model.NoOfShares,
+					Price = latestRate * model.NoOfShares
+				};
+			}
+			else // SELL
+			{
+				// Calculate number of available shares to sell. It's number of shares bought minus number of shares sold.
+
+				var trades = await _tradeRepository.GetAllTradings(portfolio.Id);
+
+				int bought = trades
+					.Where(x => x.Action.Equals("BUY") && x.Symbol.Equals(model.Symbol))
+					.Sum(x => x.NoOfShares);
+				
+				int sold = trades
+					.Where(x => x.Action.Equals("SELL") && x.Symbol.Equals(model.Symbol))
+					.Sum(x => x.NoOfShares);
+
+				int left = bought - sold;
+
+				if (left < model.NoOfShares)
+				{
+					return BadRequest("Insufficient number of shares.");
+				}
+
+				trade = new Trade()
+				{
+					Action = model.Action,
+					PortfolioId = model.PortfolioId,
+					Symbol = model.Symbol,
+					NoOfShares = model.NoOfShares,
+					Price = latestRate * model.NoOfShares
+				};
+			}
+						
+			await _tradeRepository.InsertAsync(trade);
+
+			return Created("Trade", trade);
         }
-        
     }
 }

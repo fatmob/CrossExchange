@@ -18,16 +18,19 @@ namespace CrossExchange.Controller
         [HttpGet("{symbol}")]
         public async Task<IActionResult> Get([FromRoute]string symbol)
         {
-            var shares = _shareRepository.Query().Where(x => x.Symbol.Equals(symbol)).ToList();
+			var shares = await _shareRepository.GetBySymbol(symbol);
             return Ok(shares);
         }
-
-
+		
         [HttpGet("{symbol}/Latest")]
         public async Task<IActionResult> GetLatestPrice([FromRoute]string symbol)
         {
-            var share = await _shareRepository.Query().Where(x => x.Symbol.Equals(symbol)).FirstOrDefaultAsync();
-            return Ok(share?.Rate);
+            decimal? rate = (await _shareRepository.GetBySymbol(symbol))
+				.OrderByDescending(x => x.TimeStamp)
+				.FirstOrDefault()
+				?.Rate;
+
+			return Ok(rate);
         }
 
         [HttpPost]
@@ -42,6 +45,5 @@ namespace CrossExchange.Controller
 
             return Created($"Share/{value.Id}", value);
         }
-        
     }
 }
