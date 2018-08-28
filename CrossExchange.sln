@@ -5,7 +5,12 @@ VisualStudioVersion = 15.0.27428.2037
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CrossExchange", "CrossExchange\CrossExchange.csproj", "{62E4DEEC-BB13-453C-9CF2-0D0B122D7F55}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrossExchange.Tests", "CrossExchange.Tests\CrossExchange.Tests.csproj", "{133F2B3B-4D6C-4216-876D-707A76233D15}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CrossExchange.Tests", "CrossExchange.Tests\CrossExchange.Tests.csproj", "{133F2B3B-4D6C-4216-876D-707A76233D15}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{53C4B31B-CF34-40FC-9316-FC42127A2411}"
+	ProjectSection(SolutionItems) = preProject
+		buildspec.yaml = buildspec.yaml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
